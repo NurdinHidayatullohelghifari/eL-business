@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Handy Talky — Desa Cigentur</title>
+    
+    <!-- === 1. LOAD FIREBASE SDK (Compat Version untuk HTML tunggal) === -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
         /* --- RESET & DASAR --- */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -168,8 +173,8 @@
     <header>
         <h1>Handy Talky — Desa Cigentur</h1>
         <div class="motto">REPEH RAPIH KERTA RAHARJA</div>
-        <div class="location">KABUPATEN BANDUNG • DESA CIGENTUR • Kec. Paseh</div>
-        <div class="status" id="connection-status">Menghubungkan...</div>
+        <div class="location" id="display-location">KABUPATEN BANDUNG • DESA CIGENTUR • Kec. Paseh</div>
+        <div class="status" id="connection-status">Menghubungkan ke Firebase...</div>
     </header>
 
     <!-- KOMPAS -->
@@ -197,7 +202,7 @@
     <!-- CHANNEL DISPLAY -->
     <div class="channel-display">
         <div class="ch-name" id="current-ch-name">CH 01</div>
-        <div class="ch-freq"><span id="current-ch-freq">—</span> <span id="current-ch-mhz">145.000</span> MHz</div>
+        <div class="ch-freq"><span id="current-ch-freq">145.000</span> MHz</div>
     </div>
 
     <!-- KANAL KOMUNIKASI -->
@@ -266,49 +271,86 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- JAVASCRIPT -->
+    <!-- JAVASCRIPT & FIREBASE CONFIG -->
     <!-- ========================================== -->
     <script>
-        // --- 1. INISIALISASI & EVENT LISTENER ---
-        document.addEventListener('DOMContentLoaded', () => {
-            // Simulasi koneksi berhasil setelah 1 detik
-            setTimeout(() => {
-                document.getElementById('connection-status').innerText = "Terhubung ke Server";
-                document.getElementById('connection-status').style.color = "#4caf50";
-            }, 1000);
+        // ============================================================
+        // === 2. TEMPAT TEMPEL CONFIG FIREBASE ANDA DI SINI ===
+        // ============================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyAVAFFVdo-CAkIXg2_wd_6fNLu45u9NOEg",
+            authDomain: "suci-4782c.firebaseapp.com",
+            projectId: "suci-4782c",
+            storageBucket: "suci-4782c.firebasestorage.app",
+            messagingSenderId: "65263397049",
+            appId: "1:65263397049:web:e065d0a608dacfe77b1368",
+            measurementId: "G-Z1ZGH2V9NS"
+        };
 
-            // Pasang event listener ke tombol utama
-            document.getElementById('btn-tambah-kanal').addEventListener('click', () => bukaModal('kanal'));
-            
-            // Anda bisa menambahkan tombol pengaturan di header jika diinginkan
-            // document.getElementById('btn-pengaturan').addEventListener('click', () => bukaModal('pengaturan'));
+        // Inisialisasi Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+            console.log("Firebase berhasil diinisialisasi!");
+            document.getElementById('connection-status').innerText = "Terhubung ke Firebase";
+            document.getElementById('connection-status').style.color = "#4caf50";
+        } catch (error) {
+            console.error("Error inisialisasi Firebase:", error);
+            document.getElementById('connection-status').innerText = "Gagal terhubung ke Firebase";
+            document.getElementById('connection-status').style.color = "#f44336";
+        }
+
+        // ============================================================
+        // === 3. FUNGSI MODAL (POPUP) ===
+        // ============================================================
+        document.getElementById('btn-tambah-kanal').addEventListener('click', () => {
+            document.getElementById('overlay-kanal').style.display = 'block';
+            document.getElementById('modal-kanal').style.display = 'block';
         });
 
-        // --- 2. FUNGSI MODAL (POPUP) ---
-        function bukaModal(type) {
-            document.getElementById(`overlay-${type}`).style.display = 'block';
-            document.getElementById(`modal-${type}`).style.display = 'block';
-        }
+        // Tambahkan tombol pengaturan di header jika diperlukan (opsional)
+        // document.getElementById('btn-pengaturan').addEventListener('click', () => bukaModal('pengaturan'));
 
         function tutupModal(type) {
             document.getElementById(`overlay-${type}`).style.display = 'none';
             document.getElementById(`modal-${type}`).style.display = 'none';
         }
 
-        // --- 3. FUNGSI PENGATURAN ---
+        // ============================================================
+        // === 4. FUNGSI SIMPAN KE FIREBASE ===
+        // ============================================================
         function simpanPengaturan() {
             const kab = document.getElementById('set-kabupaten').value;
             const desa = document.getElementById('set-desa').value;
             const kec = document.getElementById('set-kecamatan').value;
-            
-            // Update tampilan
-            document.querySelector('.location').innerText = `${kab} • ${desa} • ${kec}`;
-            
-            // TODO: Di sini Anda bisa menambahkan kode Firebase untuk menyimpan ke database
-            // Contoh: firebase.firestore().collection('settings').doc('app').set({ kabupaten: kab, ... })
-            
-            alert('Pengaturan berhasil disimpan!');
-            tutupModal('pengaturan');
+            const logo = document.getElementById('set-logo').value;
+
+            const btnSimpan = event.target;
+            btnSimpan.innerText = "Menyimpan...";
+            btnSimpan.disabled = true;
+
+            // Simpan ke Firestore (Collection: 'settings', Document: 'app_config')
+            firebase.firestore().collection('settings').doc('app_config').set({
+                kabupaten: kab,
+                desa: desa,
+                kecamatan: kec,
+                logo: logo,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                // Update tampilan lokal
+                document.getElementById('display-location').innerText = `${kab} • ${desa} • ${kec}`;
+                alert('Pengaturan berhasil disimpan ke Firebase!');
+                tutupModal('pengaturan');
+            })
+            .catch((error) => {
+                console.error("Error menyimpan pengaturan: ", error);
+                alert('Gagal menyimpan: ' + error.message);
+            })
+            .finally(() => {
+                btnSimpan.innerText = "Simpan";
+                btnSimpan.disabled = false;
+            });
         }
 
         function resetPengaturan() {
@@ -318,7 +360,6 @@
             document.getElementById('set-logo').value = '';
         }
 
-        // --- 4. FUNGSI TAMBAH KANAL ---
         function simpanKanal() {
             const name = document.getElementById('new-ch-name').value.trim();
             const freq = document.getElementById('new-ch-freq').value.trim();
@@ -328,49 +369,59 @@
                 return;
             }
 
-            // Update tampilan channel utama (sebagai demo)
-            document.getElementById('current-ch-name').innerText = name;
-            document.getElementById('current-ch-freq').innerText = freq;
-            document.getElementById('current-ch-mhz').innerText = ''; // Reset jika format sudah termasuk MHz
+            const btnSimpan = event.target;
+            btnSimpan.innerText = "Menyimpan...";
+            btnSimpan.disabled = true;
 
-            // TODO: Di sini Anda bisa menambahkan kode Firebase untuk menyimpan daftar kanal
-            // Contoh: firebase.firestore().collection('channels').add({ name: name, freq: freq })
-
-            alert(`Kanal ${name} (${freq} MHz) berhasil ditambahkan!`);
-            
-            // Reset form
-            document.getElementById('new-ch-name').value = '';
-            document.getElementById('new-ch-freq').value = '';
-            tutupModal('kanal');
+            // Simpan ke Firestore (Collection: 'channels')
+            firebase.firestore().collection('channels').add({
+                nama: name,
+                frekuensi: freq,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                // Update tampilan lokal sebagai feedback instan
+                document.getElementById('current-ch-name').innerText = name;
+                document.getElementById('current-ch-freq').innerText = freq;
+                
+                alert(`Kanal ${name} (${freq} MHz) berhasil ditambahkan ke Firebase!`);
+                
+                // Reset form
+                document.getElementById('new-ch-name').value = '';
+                document.getElementById('new-ch-freq').value = '';
+                tutupModal('kanal');
+            })
+            .catch((error) => {
+                console.error("Error menambah kanal: ", error);
+                alert('Gagal menyimpan kanal: ' + error.message + '\n\nPastikan Firestore Rules mengizinkan penulisan.');
+            })
+            .finally(() => {
+                btnSimpan.innerText = "Simpan";
+                btnSimpan.disabled = false;
+            });
         }
 
-        // --- 5. FUNGSI PTT (PUSH TO TALK) ---
+        // ============================================================
+        // === 5. FUNGSI LAINNYA (PTT & KOMPAS) ===
+        // ============================================================
         function startPTT() {
             const btn = document.getElementById('ptt-btn');
             btn.style.background = '#ff5252';
             btn.style.transform = 'scale(0.95)';
             document.getElementById('connection-status').innerText = "Sedang Mengirim (TX)...";
             document.getElementById('connection-status').style.color = "#ff5252";
-            
-            // TODO: Tambahkan logika aktivasi mikrofon di sini
-            console.log("PTT Activated");
         }
 
         function stopPTT() {
             const btn = document.getElementById('ptt-btn');
             btn.style.background = 'linear-gradient(145deg, #d32f2f, #b71c1c)';
             btn.style.transform = 'scale(1)';
-            document.getElementById('connection-status').innerText = "Terhubung ke Server";
+            document.getElementById('connection-status').innerText = "Terhubung ke Firebase";
             document.getElementById('connection-status').style.color = "#4caf50";
-            
-            // TODO: Tambahkan logika deaktivasi mikrofon di sini
-            console.log("PTT Deactivated");
         }
 
-        // --- 6. FUNGSI KOMPAS (DEVICE ORIENTATION) ---
         function requestSensorPermission() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                // iOS 13+ requires permission
                 DeviceOrientationEvent.requestPermission()
                     .then(response => {
                         if (response === 'granted') {
@@ -382,7 +433,6 @@
                     })
                     .catch(console.error);
             } else {
-                // Non-iOS atau perangkat lama
                 window.addEventListener('deviceorientation', handleOrientation);
                 document.querySelector('.sensor-prompt').style.display = 'none';
             }
