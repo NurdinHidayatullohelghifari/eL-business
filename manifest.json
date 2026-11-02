@@ -1,0 +1,17 @@
+{
+  "name": "Handy Talky Cigentur",
+  "short_name": "HT Cigentur",
+  "description": "Aplikasi Handy Talky Digital Desa Cigentur",
+  "start_url": "/ht-cigentur/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#FFA500",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063822.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
