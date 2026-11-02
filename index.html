@@ -3,243 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Handy Talky — Desa Cigentur</title>
+    <title>📻 Handy Talky</title>
     
-    <!-- === 1. LOAD FIREBASE SDK (Compat Version untuk HTML tunggal) === -->
+    <!-- PWA Meta Tags (Agar bisa diinstal di HP) -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Handy Talky">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon.png">
+
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <style>
-        /* --- RESET & DASAR --- */
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body {
-            background-color: #121212;
-            color: #e0e0e0;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 15px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #e0e0e0; display: flex; flex-direction: column; min-height: 100vh; padding: 10px; position: relative; overflow-x: hidden;
         }
-
-        /* --- HEADER --- */
-        header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px; }
-        header h1 { font-size: 1.2rem; color: #4caf50; letter-spacing: 1px; }
-        header .motto { font-size: 0.8rem; color: #888; font-style: italic; margin: 5px 0; }
-        header .location { font-size: 0.9rem; color: #bbb; margin-top: 5px; }
-        header .status { font-size: 0.8rem; color: #ff9800; margin-top: 5px; }
-
-        /* --- KOMPAS & STATUS --- */
-        .compass-box {
-            background: #1e1e1e;
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            margin-bottom: 15px;
-            border: 1px solid #333;
+        body::before {
+            content: ''; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80vh; height: 80vh;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23FFA500" fill-opacity="0.08" d="M256 32c-15 40-25 85-20 130 3 25 12 50 18 75-25-10-50-18-75-20-45-5-90 5-130 20 30 20 65 35 100 45 40 12 82 18 123 15-5 40-15 80-30 118 35-20 65-50 85-85-15 40-25 85-20 130 3 25 12 50 18 75 25-35 40-75 45-118 40 5 80 15 118 30-20-35-50-65-85-85 40 15 85 25 130 20 25-3 50-12 75-18-35-25-75-40-118-45-5-40-15-80-30-118 20 35 50 65 85 85-15-40-25-85-20-130-3-25-12-50-18-75-25 10-50 18-75 20-45 5-90-5-130-20 30-20 65-35 100-45 40-12 82-18 123-15z"/><circle fill="%23FFD700" fill-opacity="0.1" cx="240" cy="120" r="12"/><circle fill="%23FFD700" fill-opacity="0.1" cx="256" cy="135" r="12"/><circle fill="%23FFD700" fill-opacity="0.1" cx="272" cy="150" r="12"/></svg>');
+            background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.15; z-index: 0; pointer-events: none;
         }
-        .compass-degree { font-size: 2rem; font-weight: bold; color: #4caf50; }
-        .compass-dir { font-size: 1rem; color: #aaa; }
-        .sensor-prompt { font-size: 0.8rem; color: #ff9800; margin-top: 5px; cursor: pointer; text-decoration: underline; }
-
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            background: #1e1e1e;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-        .status-indicator { color: #4caf50; font-weight: bold; }
-
-        /* --- PTT (PUSH TO TALK) --- */
-        .ptt-container { text-align: center; margin: 20px 0; }
-        .ptt-btn {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            background: linear-gradient(145deg, #d32f2f, #b71c1c);
-            border: 4px solid #ff5252;
-            color: white;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
-            transition: all 0.1s;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .ptt-btn:active {
-            transform: scale(0.95);
-            background: #b71c1c;
-            box-shadow: 0 2px 8px rgba(211, 47, 47, 0.6);
-        }
-        .ptt-icon { font-size: 2rem; margin-bottom: 5px; }
-
-        .channel-display {
-            text-align: center;
-            background: #000;
-            color: #4caf50;
-            font-family: 'Courier New', Courier, monospace;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 1px solid #333;
-        }
-        .ch-name { font-size: 1.5rem; font-weight: bold; }
-        .ch-freq { font-size: 1.2rem; margin-top: 5px; }
-
-        /* --- KANAL & TOMBOL --- */
-        .section-title { font-size: 1rem; color: #aaa; margin: 20px 0 10px 0; border-left: 3px solid #4caf50; padding-left: 10px; }
-        
-        .btn {
-            width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 10px;
-            transition: background 0.2s;
-        }
-        .btn-primary { background-color: #4caf50; color: white; }
-        .btn-primary:hover { background-color: #45a049; }
-        .btn-secondary { background-color: #424242; color: white; }
-        .btn-secondary:hover { background-color: #555; }
-        .btn-danger { background-color: #d32f2f; color: white; }
-
-        /* --- FOOTER --- */
-        footer {
-            margin-top: auto;
-            text-align: center;
-            font-size: 0.75rem;
-            color: #666;
-            padding-top: 20px;
-            border-top: 1px solid #333;
-        }
-
-        /* --- MODAL (POPUP) --- */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(3px);
-            z-index: 9998;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            z-index: 9999;
-            border: 1px solid #444;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .modal h3 { margin-bottom: 15px; color: #4caf50; }
-        .modal p { font-size: 0.85rem; color: #aaa; margin-bottom: 15px; }
-        
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-size: 0.85rem; color: #ccc; margin-bottom: 5px; }
-        .form-group input {
-            width: 100%;
-            padding: 10px;
-            background: #2c2c2c;
-            border: 1px solid #444;
-            border-radius: 6px;
-            color: white;
-            font-size: 0.95rem;
-        }
-        .form-group input:focus { outline: none; border-color: #4caf50; }
-        
-        .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-        .modal-actions .btn { margin-bottom: 0; flex: 1; }
+        .container { position: relative; z-index: 1; width: 100%; max-width: 480px; margin: 0 auto; }
+        header { text-align: center; margin-bottom: 12px; padding: 15px; background: rgba(255, 165, 0, 0.1); border: 2px solid rgba(255, 165, 0, 0.3); border-radius: 15px; backdrop-filter: blur(10px); }
+        header h1 { font-size: 1.3rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 1px; margin-bottom: 5px; }
+        header .motto { font-size: 0.75rem; color: #FFA500; font-style: italic; margin: 5px 0; opacity: 0.9; }
+        header .location { font-size: 0.85rem; color: #FFD700; margin-top: 8px; font-weight: 600; letter-spacing: 0.5px; }
+        header .status { font-size: 0.75rem; color: #FFA500; margin-top: 8px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .info-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 165, 0, 0.15); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; backdrop-filter: blur(5px); }
+        .info-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+        .info-item:first-child { border-right: 1px solid rgba(255, 165, 0, 0.3); }
+        .compass-box { background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px; backdrop-filter: blur(5px); }
+        .compass-degree { font-size: 2.5rem; font-weight: bold; background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .compass-dir { font-size: 1rem; color: #FFA500; margin-top: 5px; }
+        .sensor-prompt { font-size: 0.7rem; color: #FFA500; margin-top: 8px; cursor: pointer; text-decoration: underline; opacity: 0.8; }
+        .status-bar { display: flex; justify-content: space-between; background: rgba(255, 165, 0, 0.15); padding: 10px 12px; border-radius: 10px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid rgba(255, 165, 0, 0.3); }
+        .status-indicator { color: #FFD700; font-weight: bold; }
+        .ptt-container { text-align: center; margin: 15px 0; }
+        .ptt-btn { width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(145deg, #FF8C00, #FF6347); border: 3px solid #FFD700; color: white; font-size: 0.85rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(255, 140, 0, 0.5); transition: all 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; user-select: none; -webkit-tap-highlight-color: transparent; }
+        .ptt-btn:active { transform: scale(0.95); background: linear-gradient(145deg, #FF6347, #FF4500); box-shadow: 0 2px 10px rgba(255, 140, 0, 0.7); }
+        .ptt-icon { font-size: 2rem; margin-bottom: 3px; }
+        .channel-display { text-align: center; background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(255, 140, 0, 0.1)); color: #FFD700; font-family: 'Courier New', Courier, monospace; padding: 12px; border-radius: 10px; margin: 12px 0; border: 2px solid rgba(255, 215, 0, 0.4); }
+        .ch-name { font-size: 1.5rem; font-weight: bold; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .ch-freq { font-size: 1.1rem; margin-top: 5px; }
+        .section-title { font-size: 0.9rem; color: #FFA500; margin: 15px 0 10px 0; border-left: 3px solid #FFD700; padding-left: 10px; font-weight: 600; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; margin-bottom: 8px; transition: all 0.2s; }
+        .btn-primary { background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%); color: white; border: 2px solid #FFD700; }
+        .btn-secondary { background: rgba(255, 165, 0, 0.3); color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.4); }
+        .btn-danger { background: rgba(255, 99, 71, 0.4); color: #FF6B6B; border: 1px solid rgba(255, 99, 71, 0.6); }
+        footer { margin-top: auto; text-align: center; font-size: 0.7rem; color: #FFA500; padding: 15px; opacity: 0.7; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); z-index: 9998; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; z-index: 9999; border: 2px solid rgba(255, 165, 0, 0.5); box-shadow: 0 10px 40px rgba(255, 165, 0, 0.3); }
+        .modal h3 { margin-bottom: 15px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .modal p { font-size: 0.8rem; color: #FFA500; margin-bottom: 15px; opacity: 0.9; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.8rem; color: #FFD700; margin-bottom: 5px; }
+        .form-group input { width: 100%; padding: 10px; background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.4); border-radius: 8px; color: #FFD700; font-size: 0.9rem; }
+        .form-group input:focus { outline: none; border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+        .modal-actions { display: flex; gap: 8px; margin-top: 15px; }
+        .modal-actions .btn { margin-bottom: 0; flex: 1; padding: 10px; font-size: 0.85rem; }
+        @media (max-width: 480px) { body { padding: 8px; } header h1 { font-size: 1.1rem; } .ptt-btn { width: 100px; height: 100px; } .compass-degree { font-size: 2rem; } }
     </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>📻 Handy Talky</h1>
+            <div class="motto">REPEH RAPIH KERTA RAHARJA</div>
+            <div class="location">Desa Cigentur Kec. Paseh Kab. Bandung</div>
+            <div class="status" id="connection-status">Menghubungkan ke Firebase...</div>
+        </header>
 
-    <!-- HEADER -->
-    <header>
-        <h1>Handy Talky — Desa Cigentur</h1>
-        <div class="motto">REPEH RAPIH KERTA RAHARJA</div>
-        <div class="location" id="display-location">KABUPATEN BANDUNG • DESA CIGENTUR • Kec. Paseh</div>
-        <div class="status" id="connection-status">Menghubungkan ke Firebase...</div>
-    </header>
+        <div class="info-bar">
+            <div class="info-item" id="clock-display"><div>Memuat waktu...</div></div>
+            <div class="info-item" id="weather-display"><span>⏳</span><div>Memuat cuaca...</div></div>
+        </div>
 
-    <!-- KOMPAS -->
-    <div class="compass-box">
-        <div style="font-size: 0.9rem; color: #888; margin-bottom: 5px;">Kompas Digital</div>
-        <div class="compass-degree" id="compass-degree">0°</div>
-        <div class="compass-dir" id="compass-dir">UTARA</div>
-        <div class="sensor-prompt" onclick="requestSensorPermission()">Izinkan akses sensor orientasi untuk mengaktifkan kompas.</div>
+        <div class="compass-box">
+            <div style="font-size: 0.85rem; color: #FFA500; margin-bottom: 5px;">🧭 Kompas Digital</div>
+            <div class="compass-degree" id="compass-degree">0°</div>
+            <div class="compass-dir" id="compass-dir">UTARA</div>
+            <div class="sensor-prompt" onclick="requestSensorPermission()">Izinkan akses sensor untuk kompas</div>
+        </div>
+
+        <div class="status-bar">
+            <span>📡 Status: <span class="status-indicator">Siaga</span></span>
+            <span id="active-users">0 pengguna aktif</span>
+        </div>
+
+        <div class="ptt-container">
+            <button class="ptt-btn" id="ptt-btn" ontouchstart="startPTT()" onmousedown="startPTT()" ontouchend="stopPTT()" onmouseup="stopPTT()" onmouseleave="stopPTT()">
+                <span class="ptt-icon">🎙️</span><span>PUSH TO TALK</span>
+            </button>
+        </div>
+
+        <div class="channel-display">
+            <div class="ch-name" id="current-ch-name">CH 01</div>
+            <div class="ch-freq"><span id="current-ch-freq">145.000</span> MHz</div>
+        </div>
+
+        <div class="section-title">📡 Kanal Komunikasi</div>
+        <button class="btn btn-primary" id="btn-tambah-kanal">+ Tambah Kanal</button>
+
+        <footer>HANDY TALKY • DESA CIGENTUR • v2.2 (PWA)<br>©2026 elghifari. All Rights Reserved</footer>
     </div>
 
-    <!-- STATUS BAR -->
-    <div class="status-bar">
-        <span>Status: <span class="status-indicator">Siaga</span></span>
-        <span id="active-users">0 pengguna aktif di kanal ini</span>
-    </div>
-
-    <!-- PTT BUTTON -->
-    <div class="ptt-container">
-        <button class="ptt-btn" id="ptt-btn" ontouchstart="startPTT()" onmousedown="startPTT()" ontouchend="stopPTT()" onmouseup="stopPTT()" onmouseleave="stopPTT()">
-            <span class="ptt-icon">🎙️</span>
-            <span>TEKAN & TAHAN</span>
-        </button>
-    </div>
-
-    <!-- CHANNEL DISPLAY -->
-    <div class="channel-display">
-        <div class="ch-name" id="current-ch-name">CH 01</div>
-        <div class="ch-freq"><span id="current-ch-freq">145.000</span> MHz</div>
-    </div>
-
-    <!-- KANAL KOMUNIKASI -->
-    <div class="section-title">Kanal Komunikasi</div>
-    <button class="btn btn-primary" id="btn-tambah-kanal">+ Tambah Kanal</button>
-
-    <!-- FOOTER -->
-    <footer>
-        HANDY TALKY • DESA CIGENTUR • v2.0 (Firebase)<br>
-        ©2026 elghifari. All Rights Reserved
-    </footer>
-
-    <!-- ========================================== -->
-    <!-- MODAL: PENGATURAN -->
-    <!-- ========================================== -->
     <div class="modal-overlay" id="overlay-pengaturan" onclick="tutupModal('pengaturan')"></div>
     <div class="modal" id="modal-pengaturan">
-        <h3>⚙️ Pengaturan</h3>
-        <p>Data tersimpan di perangkat & tersinkronisasi via Firebase.</p>
-        
-        <div class="form-group">
-            <label>Nama Kabupaten</label>
-            <input type="text" id="set-kabupaten" value="KABUPATEN BANDUNG">
-        </div>
-        <div class="form-group">
-            <label>Nama Desa</label>
-            <input type="text" id="set-desa" value="Desa Cigentur">
-        </div>
-        <div class="form-group">
-            <label>Nama Kecamatan</label>
-            <input type="text" id="set-kecamatan" value="Kec. Paseh">
-        </div>
-        <div class="form-group">
-            <label>URL Logo Kustom (opsional)</label>
-            <input type="text" id="set-logo" placeholder="https://contoh.com/logo.png">
-        </div>
-
+        <h3>⚙️ Pengaturan</h3><p>Data tersimpan di perangkat & tersinkronisasi via Firebase.</p>
+        <div class="form-group"><label>Nama Kabupaten</label><input type="text" id="set-kabupaten" value="Kab. Bandung"></div>
+        <div class="form-group"><label>Nama Desa</label><input type="text" id="set-desa" value="Desa Cigentur"></div>
+        <div class="form-group"><label>Nama Kecamatan</label><input type="text" id="set-kecamatan" value="Kec. Paseh"></div>
+        <div class="form-group"><label>URL Logo Kustom (opsional)</label><input type="text" id="set-logo" placeholder="https://contoh.com/logo.png"></div>
         <div class="modal-actions">
             <button class="btn btn-danger" onclick="resetPengaturan()">Reset</button>
             <button class="btn btn-secondary" onclick="tutupModal('pengaturan')">Batal</button>
@@ -247,206 +128,92 @@
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- MODAL: TAMBAH KANAL -->
-    <!-- ========================================== -->
     <div class="modal-overlay" id="overlay-kanal" onclick="tutupModal('kanal')"></div>
     <div class="modal" id="modal-kanal">
-        <h3>📻 Tambah Kanal</h3>
-        <p>Isi nama dan frekuensi kanal baru.</p>
-        
-        <div class="form-group">
-            <label>Nama Kanal</label>
-            <input type="text" id="new-ch-name" placeholder="Contoh: CH 02">
-        </div>
-        <div class="form-group">
-            <label>Frekuensi (MHz)</label>
-            <input type="text" id="new-ch-freq" placeholder="Contoh: 145.500">
-        </div>
-
+        <h3>📻 Tambah Kanal</h3><p>Isi nama dan frekuensi kanal baru.</p>
+        <div class="form-group"><label>Nama Kanal</label><input type="text" id="new-ch-name" placeholder="Contoh: CH 02"></div>
+        <div class="form-group"><label>Frekuensi (MHz)</label><input type="text" id="new-ch-freq" placeholder="Contoh: 145.500"></div>
         <div class="modal-actions">
             <button class="btn btn-secondary" onclick="tutupModal('kanal')">Batal</button>
             <button class="btn btn-primary" onclick="simpanKanal()">Simpan</button>
         </div>
     </div>
 
-    <!-- ========================================== -->
-    <!-- JAVASCRIPT & FIREBASE CONFIG -->
-    <!-- ========================================== -->
     <script>
-        // ============================================================
-        // === 2. TEMPAT TEMPEL CONFIG FIREBASE ANDA DI SINI ===
-        // ============================================================
         const firebaseConfig = {
             apiKey: "AIzaSyAVAFFVdo-CAkIXg2_wd_6fNLu45u9NOEg",
-            authDomain: "suci-4782c.firebaseapp.com",
-            projectId: "suci-4782c",
-            storageBucket: "suci-4782c.firebasestorage.app",
-            messagingSenderId: "65263397049",
-            appId: "1:65263397049:web:e065d0a608dacfe77b1368",
-            measurementId: "G-Z1ZGH2V9NS"
+            authDomain: "suci-4782c.firebaseapp.com", projectId: "suci-4782c", storageBucket: "suci-4782c.firebasestorage.app",
+            messagingSenderId: "65263397049", appId: "1:65263397049:web:e065d0a608dacfe77b1368", measurementId: "G-Z1ZGH2V9NS"
         };
-
-        // Inisialisasi Firebase
         try {
             firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-            console.log("Firebase berhasil diinisialisasi!");
-            document.getElementById('connection-status').innerText = "Terhubung ke Firebase";
-            document.getElementById('connection-status').style.color = "#4caf50";
+            document.getElementById('connection-status').innerText = "✅ Terhubung ke Firebase";
+            document.getElementById('connection-status').style.color = "#00FF00";
         } catch (error) {
-            console.error("Error inisialisasi Firebase:", error);
-            document.getElementById('connection-status').innerText = "Gagal terhubung ke Firebase";
-            document.getElementById('connection-status').style.color = "#f44336";
+            document.getElementById('connection-status').innerText = "❌ Gagal terhubung";
+            document.getElementById('connection-status').style.color = "#FF4500";
         }
 
-        // ============================================================
-        // === 3. FUNGSI MODAL (POPUP) ===
-        // ============================================================
-        document.getElementById('btn-tambah-kanal').addEventListener('click', () => {
-            document.getElementById('overlay-kanal').style.display = 'block';
-            document.getElementById('modal-kanal').style.display = 'block';
-        });
-
-        // Tambahkan tombol pengaturan di header jika diperlukan (opsional)
-        // document.getElementById('btn-pengaturan').addEventListener('click', () => bukaModal('pengaturan'));
-
-        function tutupModal(type) {
-            document.getElementById(`overlay-${type}`).style.display = 'none';
-            document.getElementById(`modal-${type}`).style.display = 'none';
+        function updateClock() {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('clock-display').innerHTML = `<div style="font-size: 0.7rem; color: #FFA500;">${dateStr}</div><div style="font-size: 1.3rem; font-weight: bold; color: #FFD700; font-family: 'Courier New', monospace;">${timeStr}</div>`;
         }
+        setInterval(updateClock, 1000); updateClock();
 
-        // ============================================================
-        // === 4. FUNGSI SIMPAN KE FIREBASE ===
-        // ============================================================
+        async function fetchWeather() {
+            try {
+                const lat = -6.9833, lon = 107.8167;
+                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Asia%2FJakarta`);
+                const data = await response.json();
+                const temp = data.current_weather.temperature, code = data.current_weather.weathercode, wind = data.current_weather.windspeed;
+                let weatherIcon = '☀️', weatherDesc = 'Cerah';
+                if (code >= 1 && code <= 3) { weatherIcon = '⛅'; weatherDesc = 'Berawan'; }
+                else if (code >= 45 && code <= 48) { weatherIcon = '🌫️'; weatherDesc = 'Berkabut'; }
+                else if (code >= 51 && code <= 67) { weatherIcon = '🌧️'; weatherDesc = 'Hujan'; }
+                else if (code >= 95) { weatherIcon = '⛈️'; weatherDesc = 'Badai Petir'; }
+                document.getElementById('weather-display').innerHTML = `<span style="font-size: 1.8rem;">${weatherIcon}</span><div style="text-align: left;"><div style="font-weight: bold; color: #FFD700; font-size: 1.1rem;">${temp}°C</div><div style="font-size: 0.7rem; color: #FFA500;">${weatherDesc} • ${wind} km/h</div></div>`;
+            } catch (error) {
+                document.getElementById('weather-display').innerHTML = `<span>⚠️</span><div style="font-size: 0.75rem; color: #FF6B6B;">Gagal memuat</div>`;
+            }
+        }
+        fetchWeather(); setInterval(fetchWeather, 1800000);
+
+        document.getElementById('btn-tambah-kanal').addEventListener('click', () => { document.getElementById('overlay-kanal').style.display = 'block'; document.getElementById('modal-kanal').style.display = 'block'; });
+        function tutupModal(type) { document.getElementById(`overlay-${type}`).style.display = 'none'; document.getElementById(`modal-${type}`).style.display = 'none'; }
+
         function simpanPengaturan() {
-            const kab = document.getElementById('set-kabupaten').value;
-            const desa = document.getElementById('set-desa').value;
-            const kec = document.getElementById('set-kecamatan').value;
-            const logo = document.getElementById('set-logo').value;
-
-            const btnSimpan = event.target;
-            btnSimpan.innerText = "Menyimpan...";
-            btnSimpan.disabled = true;
-
-            // Simpan ke Firestore (Collection: 'settings', Document: 'app_config')
-            firebase.firestore().collection('settings').doc('app_config').set({
-                kabupaten: kab,
-                desa: desa,
-                kecamatan: kec,
-                logo: logo,
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
-                // Update tampilan lokal
-                document.getElementById('display-location').innerText = `${kab} • ${desa} • ${kec}`;
-                alert('Pengaturan berhasil disimpan ke Firebase!');
-                tutupModal('pengaturan');
-            })
-            .catch((error) => {
-                console.error("Error menyimpan pengaturan: ", error);
-                alert('Gagal menyimpan: ' + error.message);
-            })
-            .finally(() => {
-                btnSimpan.innerText = "Simpan";
-                btnSimpan.disabled = false;
-            });
+            const kab = document.getElementById('set-kabupaten').value, desa = document.getElementById('set-desa').value, kec = document.getElementById('set-kecamatan').value, logo = document.getElementById('set-logo').value;
+            const btnSimpan = event.target; btnSimpan.innerText = "Menyimpan..."; btnSimpan.disabled = true;
+            firebase.firestore().collection('settings').doc('app_config').set({ kabupaten: kab, desa: desa, kecamatan: kec, logo: logo, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+            .then(() => { document.querySelector('.location').innerText = `${desa} ${kec} ${kab}`; alert('✅ Berhasil disimpan!'); tutupModal('pengaturan'); })
+            .catch((error) => alert('❌ Gagal: ' + error.message)).finally(() => { btnSimpan.innerText = "Simpan"; btnSimpan.disabled = false; });
         }
-
-        function resetPengaturan() {
-            document.getElementById('set-kabupaten').value = 'KABUPATEN BANDUNG';
-            document.getElementById('set-desa').value = 'Desa Cigentur';
-            document.getElementById('set-kecamatan').value = 'Kec. Paseh';
-            document.getElementById('set-logo').value = '';
-        }
+        function resetPengaturan() { document.getElementById('set-kabupaten').value = 'Kab. Bandung'; document.getElementById('set-desa').value = 'Desa Cigentur'; document.getElementById('set-kecamatan').value = 'Kec. Paseh'; document.getElementById('set-logo').value = ''; }
 
         function simpanKanal() {
-            const name = document.getElementById('new-ch-name').value.trim();
-            const freq = document.getElementById('new-ch-freq').value.trim();
-
-            if (!name || !freq) {
-                alert('Harap isi Nama Kanal dan Frekuensi!');
-                return;
-            }
-
-            const btnSimpan = event.target;
-            btnSimpan.innerText = "Menyimpan...";
-            btnSimpan.disabled = true;
-
-            // Simpan ke Firestore (Collection: 'channels')
-            firebase.firestore().collection('channels').add({
-                nama: name,
-                frekuensi: freq,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            })
-            .then(() => {
-                // Update tampilan lokal sebagai feedback instan
-                document.getElementById('current-ch-name').innerText = name;
-                document.getElementById('current-ch-freq').innerText = freq;
-                
-                alert(`Kanal ${name} (${freq} MHz) berhasil ditambahkan ke Firebase!`);
-                
-                // Reset form
-                document.getElementById('new-ch-name').value = '';
-                document.getElementById('new-ch-freq').value = '';
-                tutupModal('kanal');
-            })
-            .catch((error) => {
-                console.error("Error menambah kanal: ", error);
-                alert('Gagal menyimpan kanal: ' + error.message + '\n\nPastikan Firestore Rules mengizinkan penulisan.');
-            })
-            .finally(() => {
-                btnSimpan.innerText = "Simpan";
-                btnSimpan.disabled = false;
-            });
+            const name = document.getElementById('new-ch-name').value.trim(), freq = document.getElementById('new-ch-freq').value.trim();
+            if (!name || !freq) { alert('⚠️ Harap isi Nama Kanal dan Frekuensi!'); return; }
+            const btnSimpan = event.target; btnSimpan.innerText = "Menyimpan..."; btnSimpan.disabled = true;
+            firebase.firestore().collection('channels').add({ nama: name, frekuensi: freq, createdAt: firebase.firestore.FieldValue.serverTimestamp() })
+            .then(() => { document.getElementById('current-ch-name').innerText = name; document.getElementById('current-ch-freq').innerText = freq; alert(`✅ Kanal ${name} (${freq} MHz) ditambahkan!`); document.getElementById('new-ch-name').value = ''; document.getElementById('new-ch-freq').value = ''; tutupModal('kanal'); })
+            .catch((error) => alert('❌ Gagal: ' + error.message)).finally(() => { btnSimpan.innerText = "Simpan"; btnSimpan.disabled = false; });
         }
 
-        // ============================================================
-        // === 5. FUNGSI LAINNYA (PTT & KOMPAS) ===
-        // ============================================================
-        function startPTT() {
-            const btn = document.getElementById('ptt-btn');
-            btn.style.background = '#ff5252';
-            btn.style.transform = 'scale(0.95)';
-            document.getElementById('connection-status').innerText = "Sedang Mengirim (TX)...";
-            document.getElementById('connection-status').style.color = "#ff5252";
-        }
-
-        function stopPTT() {
-            const btn = document.getElementById('ptt-btn');
-            btn.style.background = 'linear-gradient(145deg, #d32f2f, #b71c1c)';
-            btn.style.transform = 'scale(1)';
-            document.getElementById('connection-status').innerText = "Terhubung ke Firebase";
-            document.getElementById('connection-status').style.color = "#4caf50";
-        }
+        function startPTT() { document.getElementById('ptt-btn').style.background = 'linear-gradient(145deg, #FF4500, #FF6347)'; document.getElementById('ptt-btn').style.transform = 'scale(0.95)'; document.getElementById('connection-status').innerText = "🔴 TX - Mengirim..."; document.getElementById('connection-status').style.color = "#FF4500"; }
+        function stopPTT() { document.getElementById('ptt-btn').style.background = 'linear-gradient(145deg, #FF8C00, #FF6347)'; document.getElementById('ptt-btn').style.transform = 'scale(1)'; document.getElementById('connection-status').innerText = "✅ Terhubung ke Firebase"; document.getElementById('connection-status').style.color = "#00FF00"; }
 
         function requestSensorPermission() {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(response => {
-                        if (response === 'granted') {
-                            window.addEventListener('deviceorientation', handleOrientation);
-                            document.querySelector('.sensor-prompt').style.display = 'none';
-                        } else {
-                            alert('Izin sensor ditolak.');
-                        }
-                    })
-                    .catch(console.error);
-            } else {
-                window.addEventListener('deviceorientation', handleOrientation);
-                document.querySelector('.sensor-prompt').style.display = 'none';
-            }
+                DeviceOrientationEvent.requestPermission().then(response => { if (response === 'granted') { window.addEventListener('deviceorientation', handleOrientation); document.querySelector('.sensor-prompt').style.display = 'none'; } else { alert('Izin ditolak.'); } }).catch(console.error);
+            } else { window.addEventListener('deviceorientation', handleOrientation); document.querySelector('.sensor-prompt').style.display = 'none'; }
         }
-
         function handleOrientation(event) {
             let compass = event.webkitCompassHeading || Math.abs(event.alpha - 360);
             document.getElementById('compass-degree').innerText = Math.round(compass) + '°';
-            
             let direction = 'UTARA';
-            if (compass > 45 && compass <= 135) direction = 'TIMUR';
-            else if (compass > 135 && compass <= 225) direction = 'SELATAN';
-            else if (compass > 225 && compass <= 315) direction = 'BARAT';
-            
+            if (compass > 45 && compass <= 135) direction = 'TIMUR'; else if (compass > 135 && compass <= 225) direction = 'SELATAN'; else if (compass > 225 && compass <= 315) direction = 'BARAT';
             document.getElementById('compass-dir').innerText = direction;
         }
     </script>
