@@ -1,221 +1,644 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📻 Handy Talky</title>
-    
-    <!-- PWA Meta Tags (Agar bisa diinstal di HP) -->
-    <meta name="theme-color" content="#1a1a2e">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Handy Talky">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="icon.png">
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+{% extends "base.html" %}
+{% block content %}
 
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            color: #e0e0e0; display: flex; flex-direction: column; min-height: 100vh; padding: 10px; position: relative; overflow-x: hidden;
-        }
-        body::before {
-            content: ''; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80vh; height: 80vh;
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path fill="%23FFA500" fill-opacity="0.08" d="M256 32c-15 40-25 85-20 130 3 25 12 50 18 75-25-10-50-18-75-20-45-5-90 5-130 20 30 20 65 35 100 45 40 12 82 18 123 15-5 40-15 80-30 118 35-20 65-50 85-85-15 40-25 85-20 130 3 25 12 50 18 75 25-35 40-75 45-118 40 5 80 15 118 30-20-35-50-65-85-85 40 15 85 25 130 20 25-3 50-12 75-18-35-25-75-40-118-45-5-40-15-80-30-118 20 35 50 65 85 85-15-40-25-85-20-130-3-25-12-50-18-75-25 10-50 18-75 20-45 5-90-5-130-20 30-20 65-35 100-45 40-12 82-18 123-15z"/><circle fill="%23FFD700" fill-opacity="0.1" cx="240" cy="120" r="12"/><circle fill="%23FFD700" fill-opacity="0.1" cx="256" cy="135" r="12"/><circle fill="%23FFD700" fill-opacity="0.1" cx="272" cy="150" r="12"/></svg>');
-            background-size: contain; background-repeat: no-repeat; background-position: center; opacity: 0.15; z-index: 0; pointer-events: none;
-        }
-        .container { position: relative; z-index: 1; width: 100%; max-width: 480px; margin: 0 auto; }
-        header { text-align: center; margin-bottom: 12px; padding: 15px; background: rgba(255, 165, 0, 0.1); border: 2px solid rgba(255, 165, 0, 0.3); border-radius: 15px; backdrop-filter: blur(10px); }
-        header h1 { font-size: 1.3rem; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 1px; margin-bottom: 5px; }
-        header .motto { font-size: 0.75rem; color: #FFA500; font-style: italic; margin: 5px 0; opacity: 0.9; }
-        header .location { font-size: 0.85rem; color: #FFD700; margin-top: 8px; font-weight: 600; letter-spacing: 0.5px; }
-        header .status { font-size: 0.75rem; color: #FFA500; margin-top: 8px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .info-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(255, 165, 0, 0.15); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; backdrop-filter: blur(5px); }
-        .info-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
-        .info-item:first-child { border-right: 1px solid rgba(255, 165, 0, 0.3); }
-        .compass-box { background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.3); border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 12px; backdrop-filter: blur(5px); }
-        .compass-degree { font-size: 2.5rem; font-weight: bold; background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .compass-dir { font-size: 1rem; color: #FFA500; margin-top: 5px; }
-        .sensor-prompt { font-size: 0.7rem; color: #FFA500; margin-top: 8px; cursor: pointer; text-decoration: underline; opacity: 0.8; }
-        .status-bar { display: flex; justify-content: space-between; background: rgba(255, 165, 0, 0.15); padding: 10px 12px; border-radius: 10px; margin-bottom: 15px; font-size: 0.8rem; border: 1px solid rgba(255, 165, 0, 0.3); }
-        .status-indicator { color: #FFD700; font-weight: bold; }
-        .ptt-container { text-align: center; margin: 15px 0; }
-        .ptt-btn { width: 110px; height: 110px; border-radius: 50%; background: linear-gradient(145deg, #FF8C00, #FF6347); border: 3px solid #FFD700; color: white; font-size: 0.85rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 20px rgba(255, 140, 0, 0.5); transition: all 0.1s; display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 auto; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .ptt-btn:active { transform: scale(0.95); background: linear-gradient(145deg, #FF6347, #FF4500); box-shadow: 0 2px 10px rgba(255, 140, 0, 0.7); }
-        .ptt-icon { font-size: 2rem; margin-bottom: 3px; }
-        .channel-display { text-align: center; background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(255, 140, 0, 0.1)); color: #FFD700; font-family: 'Courier New', Courier, monospace; padding: 12px; border-radius: 10px; margin: 12px 0; border: 2px solid rgba(255, 215, 0, 0.4); }
-        .ch-name { font-size: 1.5rem; font-weight: bold; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
-        .ch-freq { font-size: 1.1rem; margin-top: 5px; }
-        .section-title { font-size: 0.9rem; color: #FFA500; margin: 15px 0 10px 0; border-left: 3px solid #FFD700; padding-left: 10px; font-weight: 600; }
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; margin-bottom: 8px; transition: all 0.2s; }
-        .btn-primary { background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%); color: white; border: 2px solid #FFD700; }
-        .btn-secondary { background: rgba(255, 165, 0, 0.3); color: #FFD700; border: 1px solid rgba(255, 215, 0, 0.4); }
-        .btn-danger { background: rgba(255, 99, 71, 0.4); color: #FF6B6B; border: 1px solid rgba(255, 99, 71, 0.6); }
-        footer { margin-top: auto; text-align: center; font-size: 0.7rem; color: #FFA500; padding: 15px; opacity: 0.7; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px); z-index: 9998; }
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 20px; border-radius: 15px; width: 90%; max-width: 400px; z-index: 9999; border: 2px solid rgba(255, 165, 0, 0.5); box-shadow: 0 10px 40px rgba(255, 165, 0, 0.3); }
-        .modal h3 { margin-bottom: 15px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .modal p { font-size: 0.8rem; color: #FFA500; margin-bottom: 15px; opacity: 0.9; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 0.8rem; color: #FFD700; margin-bottom: 5px; }
-        .form-group input { width: 100%; padding: 10px; background: rgba(255, 165, 0, 0.1); border: 1px solid rgba(255, 165, 0, 0.4); border-radius: 8px; color: #FFD700; font-size: 0.9rem; }
-        .form-group input:focus { outline: none; border-color: #FFD700; box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
-        .modal-actions { display: flex; gap: 8px; margin-top: 15px; }
-        .modal-actions .btn { margin-bottom: 0; flex: 1; padding: 10px; font-size: 0.85rem; }
-        @media (max-width: 480px) { body { padding: 8px; } header h1 { font-size: 1.1rem; } .ptt-btn { width: 100px; height: 100px; } .compass-degree { font-size: 2rem; } }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>📻 Handy Talky</h1>
-            <div class="motto">REPEH RAPIH KERTA RAHARJA</div>
-            <div class="location">Desa Cigentur Kec. Paseh Kab. Bandung</div>
-            <div class="status" id="connection-status">Menghubungkan ke Firebase...</div>
-        </header>
+<style>
+/* =================================
+   GLASSY BUSINESS DASHBOARD
+================================= */
 
-        <div class="info-bar">
-            <div class="info-item" id="clock-display"><div>Memuat waktu...</div></div>
-            <div class="info-item" id="weather-display"><span>⏳</span><div>Memuat cuaca...</div></div>
+.glass-dashboard {
+    --bg: #080f1e;
+    --glass: rgba(255,255,255,.075);
+    --line: rgba(255,255,255,.13);
+    --cyan: #67e8f9;
+    --purple: #a78bfa;
+    --text: #f1f5ff;
+    --muted: #a5b4c8;
+
+    color: var(--text);
+    max-width: 1450px;
+    margin: auto;
+    padding: 30px 22px 70px;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.glass-dashboard *,
+.glass-dashboard *::before,
+.glass-dashboard *::after {
+    box-sizing: border-box;
+}
+
+.glass-dashboard::before,
+.glass-dashboard::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    filter: blur(90px);
+    pointer-events: none;
+}
+
+.glass-dashboard::before {
+    background: rgba(34,211,238,.15);
+    top: -150px;
+    left: -150px;
+}
+
+.glass-dashboard::after {
+    background: rgba(139,92,246,.15);
+    right: -150px;
+    bottom: 100px;
+}
+
+.glass-panel {
+    background: linear-gradient(
+        135deg,
+        rgba(255,255,255,.11),
+        rgba(255,255,255,.035)
+    );
+    border: 1px solid var(--line);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    box-shadow:
+        0 20px 50px rgba(0,0,0,.22),
+        inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+/* HERO */
+
+.glass-hero {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    align-items: center;
+    gap: 30px;
+    padding: clamp(28px,5vw,65px);
+    border-radius: 30px;
+    min-height: 350px;
+    position: relative;
+    overflow: hidden;
+}
+
+.glass-label {
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.glass-hero h1 {
+    font-size: clamp(36px,5vw,65px);
+    line-height: 1.08;
+    letter-spacing: -2px;
+    margin: 20px 0;
+    color: #fff;
+}
+
+.glass-hero h1 em {
+    font-style: normal;
+    background: linear-gradient(90deg,var(--cyan),var(--purple));
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+}
+
+.glass-hero p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.8;
+    max-width: 600px;
+}
+
+.glass-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.glass-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 13px 20px;
+    border-radius: 13px;
+    text-decoration: none;
+    color: white;
+    background: rgba(255,255,255,.07);
+    border: 1px solid var(--line);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: .3s;
+}
+
+.glass-btn.primary {
+    color: #071522;
+    border: none;
+    background: linear-gradient(110deg,var(--cyan),var(--purple));
+    box-shadow: 0 8px 25px rgba(103,232,249,.2);
+}
+
+.glass-btn:hover {
+    transform: translateY(-4px);
+    filter: brightness(1.1);
+}
+
+/* 3D VISUAL */
+
+.glass-visual {
+    min-height: 260px;
+    display: grid;
+    place-items: center;
+    position: relative;
+}
+
+.glass-orbit {
+    width: 215px;
+    height: 215px;
+    border: 1px solid rgba(103,232,249,.5);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    position: relative;
+    box-shadow: 0 0 65px rgba(103,232,249,.15);
+    animation: floating 6s ease-in-out infinite;
+}
+
+.glass-orbit::before,
+.glass-orbit::after {
+    content: "";
+    position: absolute;
+    inset: -20px;
+    border: 1px solid rgba(167,139,250,.4);
+    border-radius: 50%;
+    transform: rotateX(65deg) rotate(35deg);
+}
+
+.glass-orbit::after {
+    inset: 20px;
+    transform: rotateX(65deg) rotate(-35deg);
+}
+
+.glass-core {
+    width: 110px;
+    height: 110px;
+    display: grid;
+    place-items: center;
+    font-size: 34px;
+    font-weight: 900;
+    border-radius: 30px;
+    background: linear-gradient(
+        145deg,
+        rgba(103,232,249,.35),
+        rgba(167,139,250,.35)
+    );
+    border: 1px solid rgba(255,255,255,.4);
+    box-shadow: 0 0 40px rgba(103,232,249,.2);
+    transform: rotate(-8deg);
+}
+
+.glass-floating {
+    position: absolute;
+    bottom: 10px;
+    right: 0;
+    padding: 15px 20px;
+    border-radius: 15px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+}
+
+.glass-floating strong {
+    display: block;
+    color: white;
+    font-size: 16px;
+    margin-top: 5px;
+}
+
+@keyframes floating {
+    0%,100% { transform: translateY(0) rotate(0); }
+    50% { transform: translateY(-12px) rotate(5deg); }
+}
+
+/* SECTION */
+
+.glass-section {
+    margin-top: 45px;
+}
+
+.glass-heading {
+    margin-bottom: 20px;
+}
+
+.glass-heading span {
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+.glass-heading h2 {
+    color: white;
+    font-size: clamp(23px,3vw,31px);
+    margin: 8px 0;
+}
+
+/* MODULES */
+
+.glass-module-grid {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 17px;
+}
+
+.glass-module {
+    display: flex;
+    flex-direction: column;
+    min-height: 210px;
+    padding: 23px;
+    border-radius: 22px;
+    color: white;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    transition: .3s;
+}
+
+.glass-module:hover {
+    transform: translateY(-7px);
+    border-color: var(--cyan);
+    box-shadow: 0 20px 45px rgba(0,0,0,.3);
+}
+
+.glass-number {
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+
+.glass-module h3 {
+    margin: 25px 0 10px;
+    font-size: 19px;
+    color: white;
+}
+
+.glass-module p {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.glass-arrow {
+    margin-top: auto;
+    color: var(--cyan);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+/* SEARCH */
+
+.glass-search {
+    display: grid;
+    grid-template-columns: 1fr 240px auto;
+    gap: 12px;
+    padding: 13px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+}
+
+.glass-search input,
+.glass-search select {
+    width: 100%;
+    min-width: 0;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: rgba(5,13,27,.7);
+    color: white;
+    outline: none;
+    font-size: 13px;
+}
+
+.glass-search input:focus,
+.glass-search select:focus {
+    border-color: var(--cyan);
+    box-shadow: 0 0 15px rgba(103,232,249,.12);
+}
+
+.glass-search input::placeholder {
+    color: #8192a9;
+}
+
+.glass-search select option {
+    background: #101b2d;
+    color: white;
+}
+
+/* LISTINGS */
+
+.glass-listing-grid {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 17px;
+}
+
+.glass-listing {
+    display: flex;
+    flex-direction: column;
+    padding: 22px;
+    min-height: 230px;
+    border-radius: 20px;
+    text-decoration: none;
+    color: white;
+    transition: .3s;
+}
+
+.glass-listing:hover {
+    transform: translateY(-5px);
+    border-color: var(--cyan);
+}
+
+.glass-tag {
+    align-self: flex-start;
+    padding: 7px 12px;
+    border-radius: 30px;
+    background: rgba(103,232,249,.1);
+    border: 1px solid rgba(103,232,249,.2);
+    color: var(--cyan);
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.glass-listing h3 {
+    font-size: 17px;
+    line-height: 1.5;
+    margin: 16px 0 8px;
+    color: white;
+}
+
+.glass-listing p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--muted);
+}
+
+.glass-meta {
+    margin-top: auto;
+    font-size: 11px;
+    color: #9aabc0;
+}
+
+.glass-price {
+    color: #a5f3fc;
+    display: block;
+    margin-top: 10px;
+    font-size: 15px;
+}
+
+.glass-empty {
+    grid-column: 1/-1;
+    padding: 35px;
+    border-radius: 18px;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* RESPONSIVE */
+
+@media(max-width:1000px) {
+    .glass-module-grid {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+
+    .glass-listing-grid {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+    }
+}
+
+@media(max-width:700px) {
+    .glass-dashboard {
+        padding: 18px 12px 45px;
+    }
+
+    .glass-hero {
+        grid-template-columns: 1fr;
+        padding: 28px 22px;
+    }
+
+    .glass-hero h1 {
+        font-size: 38px;
+    }
+
+    .glass-visual {
+        min-height: 210px;
+    }
+
+    .glass-search {
+        grid-template-columns: 1fr;
+    }
+
+    .glass-listing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .glass-floating {
+        right: 0;
+    }
+}
+
+@media(max-width:420px) {
+    .glass-module-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .glass-module {
+        min-height: 175px;
+    }
+}
+
+@media(prefers-reduced-motion:reduce) {
+    .glass-dashboard * {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+</style>
+
+<div class="glass-dashboard">
+
+    <!-- HERO DASHBOARD -->
+    <section class="glass-hero glass-panel">
+
+        <div>
+            <span class="glass-label">
+                ONE PLATFORM • FOUR BUSINESS MODULES
+            </span>
+
+            <h1>
+                Temukan peluang.<br>
+                <em>Bangun koneksi bisnis.</em>
+            </h1>
+
+            <p>
+                Marketplace produk industri, properti komersial,
+                direktori supplier, dan layanan perusahaan
+                dalam satu platform.
+            </p>
+
+            <div class="glass-actions">
+                <a class="glass-btn primary"
+                   href="{{ url_for('register') }}">
+                    Mulai bergabung ↗
+                </a>
+
+                <a class="glass-btn" href="#glass-marketplace">
+                    Jelajahi listing ↓
+                </a>
+            </div>
         </div>
 
-        <div class="compass-box">
-            <div style="font-size: 0.85rem; color: #FFA500; margin-bottom: 5px;">🧭 Kompas Digital</div>
-            <div class="compass-degree" id="compass-degree">0°</div>
-            <div class="compass-dir" id="compass-dir">UTARA</div>
-            <div class="sensor-prompt" onclick="requestSensorPermission()">Izinkan akses sensor untuk kompas</div>
+        <div class="glass-visual" aria-hidden="true">
+            <div class="glass-orbit">
+                <div class="glass-core">EL</div>
+            </div>
+
+            <div class="glass-floating glass-panel">
+                BUSINESS NETWORK
+                <strong>CONNECTED</strong>
+            </div>
         </div>
 
-        <div class="status-bar">
-            <span>📡 Status: <span class="status-indicator">Siaga</span></span>
-            <span id="active-users">0 pengguna aktif</span>
+    </section>
+
+    <!-- FOUR MODULES -->
+    <section class="glass-section">
+
+        <div class="glass-heading">
+            <span>EXPLORE PLATFORM</span>
+            <h2>Empat modul utama</h2>
         </div>
 
-        <div class="ptt-container">
-            <button class="ptt-btn" id="ptt-btn" ontouchstart="startPTT()" onmousedown="startPTT()" ontouchend="stopPTT()" onmouseup="stopPTT()" onmouseleave="stopPTT()">
-                <span class="ptt-icon">🎙️</span><span>PUSH TO TALK</span>
+        <div class="glass-module-grid">
+
+            {% for key, data in modules.items() %}
+
+            <a class="glass-module glass-panel"
+               href="{{ url_for('index',module=key) }}">
+
+                <span class="glass-number">
+                    MODULE / 0{{ loop.index }}
+                </span>
+
+                <h3>{{ data[0] }}</h3>
+
+                <p>{{ data[1] }}</p>
+
+                <span class="glass-arrow">
+                    Jelajahi modul →
+                </span>
+
+            </a>
+
+            {% endfor %}
+
+        </div>
+    </section>
+
+    <!-- MARKETPLACE -->
+    <section class="glass-section" id="glass-marketplace">
+
+        <div class="glass-heading">
+            <span>MARKETPLACE</span>
+
+            <h2>
+                {% if selected_module %}
+                    {{ modules[selected_module][0] }}
+                {% else %}
+                    Listing terbaru
+                {% endif %}
+            </h2>
+        </div>
+
+        <!-- SEARCH -->
+        <form class="glass-search glass-panel" method="get">
+
+            <input
+                name="q"
+                value="{{ query }}"
+                placeholder="Cari produk, properti, supplier, layanan..."
+                aria-label="Cari listing">
+
+            <select name="module" aria-label="Pilih modul">
+
+                <option value="">Semua modul</option>
+
+                {% for key,data in modules.items() %}
+
+                <option value="{{ key }}"
+                    {% if selected_module==key %}selected{% endif %}>
+                    {{ data[0] }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+            <button class="glass-btn primary" type="submit">
+                Cari ⌕
             </button>
+
+        </form>
+
+        <!-- LISTING CARDS -->
+        <div class="glass-listing-grid">
+
+            {% for item in listings %}
+
+            <a class="glass-listing glass-panel"
+               href="{{ url_for('listing_detail',listing_id=item.id) }}">
+
+                <span class="glass-tag">
+                    {{ modules[item.module][0] }}
+                </span>
+
+                <h3>{{ item.title }}</h3>
+
+                <p>
+                    {{ item.description[:130] }}
+                    {% if item.description|length>130 %}…{% endif %}
+                </p>
+
+                <div class="glass-meta">
+                    {{ item.location or 'Lokasi tidak dicantumkan' }}
+                </div>
+
+                <strong class="glass-price">
+                    {{ item.price_text }}
+                </strong>
+
+            </a>
+
+            {% else %}
+
+            <div class="glass-empty glass-panel">
+                Belum ada listing yang dipublikasikan.
+                Jadilah pengguna pertama yang mengirim penawaran.
+            </div>
+
+            {% endfor %}
+
         </div>
 
-        <div class="channel-display">
-            <div class="ch-name" id="current-ch-name">CH 01</div>
-            <div class="ch-freq"><span id="current-ch-freq">145.000</span> MHz</div>
-        </div>
+    </section>
 
-        <div class="section-title">📡 Kanal Komunikasi</div>
-        <button class="btn btn-primary" id="btn-tambah-kanal">+ Tambah Kanal</button>
+</div>
 
-        <footer>HANDY TALKY • DESA CIGENTUR • v2.2 (PWA)<br>©2026 elghifari. All Rights Reserved</footer>
-    </div>
-
-    <div class="modal-overlay" id="overlay-pengaturan" onclick="tutupModal('pengaturan')"></div>
-    <div class="modal" id="modal-pengaturan">
-        <h3>⚙️ Pengaturan</h3><p>Data tersimpan di perangkat & tersinkronisasi via Firebase.</p>
-        <div class="form-group"><label>Nama Kabupaten</label><input type="text" id="set-kabupaten" value="Kab. Bandung"></div>
-        <div class="form-group"><label>Nama Desa</label><input type="text" id="set-desa" value="Desa Cigentur"></div>
-        <div class="form-group"><label>Nama Kecamatan</label><input type="text" id="set-kecamatan" value="Kec. Paseh"></div>
-        <div class="form-group"><label>URL Logo Kustom (opsional)</label><input type="text" id="set-logo" placeholder="https://contoh.com/logo.png"></div>
-        <div class="modal-actions">
-            <button class="btn btn-danger" onclick="resetPengaturan()">Reset</button>
-            <button class="btn btn-secondary" onclick="tutupModal('pengaturan')">Batal</button>
-            <button class="btn btn-primary" onclick="simpanPengaturan()">Simpan</button>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="overlay-kanal" onclick="tutupModal('kanal')"></div>
-    <div class="modal" id="modal-kanal">
-        <h3>📻 Tambah Kanal</h3><p>Isi nama dan frekuensi kanal baru.</p>
-        <div class="form-group"><label>Nama Kanal</label><input type="text" id="new-ch-name" placeholder="Contoh: CH 02"></div>
-        <div class="form-group"><label>Frekuensi (MHz)</label><input type="text" id="new-ch-freq" placeholder="Contoh: 145.500"></div>
-        <div class="modal-actions">
-            <button class="btn btn-secondary" onclick="tutupModal('kanal')">Batal</button>
-            <button class="btn btn-primary" onclick="simpanKanal()">Simpan</button>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyAVAFFVdo-CAkIXg2_wd_6fNLu45u9NOEg",
-            authDomain: "suci-4782c.firebaseapp.com", projectId: "suci-4782c", storageBucket: "suci-4782c.firebasestorage.app",
-            messagingSenderId: "65263397049", appId: "1:65263397049:web:e065d0a608dacfe77b1368", measurementId: "G-Z1ZGH2V9NS"
-        };
-        try {
-            firebase.initializeApp(firebaseConfig);
-            document.getElementById('connection-status').innerText = "✅ Terhubung ke Firebase";
-            document.getElementById('connection-status').style.color = "#00FF00";
-        } catch (error) {
-            document.getElementById('connection-status').innerText = "❌ Gagal terhubung";
-            document.getElementById('connection-status').style.color = "#FF4500";
-        }
-
-        function updateClock() {
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
-            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            document.getElementById('clock-display').innerHTML = `<div style="font-size: 0.7rem; color: #FFA500;">${dateStr}</div><div style="font-size: 1.3rem; font-weight: bold; color: #FFD700; font-family: 'Courier New', monospace;">${timeStr}</div>`;
-        }
-        setInterval(updateClock, 1000); updateClock();
-
-        async function fetchWeather() {
-            try {
-                const lat = -6.9833, lon = 107.8167;
-                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=Asia%2FJakarta`);
-                const data = await response.json();
-                const temp = data.current_weather.temperature, code = data.current_weather.weathercode, wind = data.current_weather.windspeed;
-                let weatherIcon = '☀️', weatherDesc = 'Cerah';
-                if (code >= 1 && code <= 3) { weatherIcon = '⛅'; weatherDesc = 'Berawan'; }
-                else if (code >= 45 && code <= 48) { weatherIcon = '🌫️'; weatherDesc = 'Berkabut'; }
-                else if (code >= 51 && code <= 67) { weatherIcon = '🌧️'; weatherDesc = 'Hujan'; }
-                else if (code >= 95) { weatherIcon = '⛈️'; weatherDesc = 'Badai Petir'; }
-                document.getElementById('weather-display').innerHTML = `<span style="font-size: 1.8rem;">${weatherIcon}</span><div style="text-align: left;"><div style="font-weight: bold; color: #FFD700; font-size: 1.1rem;">${temp}°C</div><div style="font-size: 0.7rem; color: #FFA500;">${weatherDesc} • ${wind} km/h</div></div>`;
-            } catch (error) {
-                document.getElementById('weather-display').innerHTML = `<span>⚠️</span><div style="font-size: 0.75rem; color: #FF6B6B;">Gagal memuat</div>`;
-            }
-        }
-        fetchWeather(); setInterval(fetchWeather, 1800000);
-
-        document.getElementById('btn-tambah-kanal').addEventListener('click', () => { document.getElementById('overlay-kanal').style.display = 'block'; document.getElementById('modal-kanal').style.display = 'block'; });
-        function tutupModal(type) { document.getElementById(`overlay-${type}`).style.display = 'none'; document.getElementById(`modal-${type}`).style.display = 'none'; }
-
-        function simpanPengaturan() {
-            const kab = document.getElementById('set-kabupaten').value, desa = document.getElementById('set-desa').value, kec = document.getElementById('set-kecamatan').value, logo = document.getElementById('set-logo').value;
-            const btnSimpan = event.target; btnSimpan.innerText = "Menyimpan..."; btnSimpan.disabled = true;
-            firebase.firestore().collection('settings').doc('app_config').set({ kabupaten: kab, desa: desa, kecamatan: kec, logo: logo, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-            .then(() => { document.querySelector('.location').innerText = `${desa} ${kec} ${kab}`; alert('✅ Berhasil disimpan!'); tutupModal('pengaturan'); })
-            .catch((error) => alert('❌ Gagal: ' + error.message)).finally(() => { btnSimpan.innerText = "Simpan"; btnSimpan.disabled = false; });
-        }
-        function resetPengaturan() { document.getElementById('set-kabupaten').value = 'Kab. Bandung'; document.getElementById('set-desa').value = 'Desa Cigentur'; document.getElementById('set-kecamatan').value = 'Kec. Paseh'; document.getElementById('set-logo').value = ''; }
-
-        function simpanKanal() {
-            const name = document.getElementById('new-ch-name').value.trim(), freq = document.getElementById('new-ch-freq').value.trim();
-            if (!name || !freq) { alert('⚠️ Harap isi Nama Kanal dan Frekuensi!'); return; }
-            const btnSimpan = event.target; btnSimpan.innerText = "Menyimpan..."; btnSimpan.disabled = true;
-            firebase.firestore().collection('channels').add({ nama: name, frekuensi: freq, createdAt: firebase.firestore.FieldValue.serverTimestamp() })
-            .then(() => { document.getElementById('current-ch-name').innerText = name; document.getElementById('current-ch-freq').innerText = freq; alert(`✅ Kanal ${name} (${freq} MHz) ditambahkan!`); document.getElementById('new-ch-name').value = ''; document.getElementById('new-ch-freq').value = ''; tutupModal('kanal'); })
-            .catch((error) => alert('❌ Gagal: ' + error.message)).finally(() => { btnSimpan.innerText = "Simpan"; btnSimpan.disabled = false; });
-        }
-
-        function startPTT() { document.getElementById('ptt-btn').style.background = 'linear-gradient(145deg, #FF4500, #FF6347)'; document.getElementById('ptt-btn').style.transform = 'scale(0.95)'; document.getElementById('connection-status').innerText = "🔴 TX - Mengirim..."; document.getElementById('connection-status').style.color = "#FF4500"; }
-        function stopPTT() { document.getElementById('ptt-btn').style.background = 'linear-gradient(145deg, #FF8C00, #FF6347)'; document.getElementById('ptt-btn').style.transform = 'scale(1)'; document.getElementById('connection-status').innerText = "✅ Terhubung ke Firebase"; document.getElementById('connection-status').style.color = "#00FF00"; }
-
-        function requestSensorPermission() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(response => { if (response === 'granted') { window.addEventListener('deviceorientation', handleOrientation); document.querySelector('.sensor-prompt').style.display = 'none'; } else { alert('Izin ditolak.'); } }).catch(console.error);
-            } else { window.addEventListener('deviceorientation', handleOrientation); document.querySelector('.sensor-prompt').style.display = 'none'; }
-        }
-        function handleOrientation(event) {
-            let compass = event.webkitCompassHeading || Math.abs(event.alpha - 360);
-            document.getElementById('compass-degree').innerText = Math.round(compass) + '°';
-            let direction = 'UTARA';
-            if (compass > 45 && compass <= 135) direction = 'TIMUR'; else if (compass > 135 && compass <= 225) direction = 'SELATAN'; else if (compass > 225 && compass <= 315) direction = 'BARAT';
-            document.getElementById('compass-dir').innerText = direction;
-        }
-    </script>
-</body>
-</html>
+{% endblock %}
